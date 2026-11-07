@@ -230,6 +230,17 @@ async function updateReminder(req, res) {
   let session;
 
   try {
+    if (
+      !req.body ||
+      typeof req.body !== "object" ||
+      Array.isArray(req.body)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Request body must be a JSON object",
+      });
+    }
+
     const allowedFields = [
       "title",
       "category",
@@ -380,20 +391,27 @@ async function updateReminder(req, res) {
 
       const justCompleted = wasPending && updates.isCompleted === true;
       if (justCompleted && updatedReminder.recurrence !== "none") {
-        const nextReminder = new Reminder({
-          title: updatedReminder.title,
-          category: updatedReminder.category,
-          dueDate: calculateNextDueDate(
-            updatedReminder.dueDate,
-            updatedReminder.recurrence
-          ),
-          recurrence: updatedReminder.recurrence,
-          isCompleted: false,
-          user: updatedReminder.user,
+        const existingNextReminder = await Reminder.findOne({
           generatedFrom: updatedReminder._id,
-        });
+          user: updatedReminder.user,
+        }).session(session);
 
-        await nextReminder.save({ session });
+        if (!existingNextReminder) {
+          const nextReminder = new Reminder({
+            title: updatedReminder.title,
+            category: updatedReminder.category,
+            dueDate: calculateNextDueDate(
+              updatedReminder.dueDate,
+              updatedReminder.recurrence
+            ),
+            recurrence: updatedReminder.recurrence,
+            isCompleted: false,
+            user: updatedReminder.user,
+            generatedFrom: updatedReminder._id,
+          });
+
+          await nextReminder.save({ session });
+        }
       }
     });
 
