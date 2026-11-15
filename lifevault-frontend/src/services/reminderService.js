@@ -1,10 +1,8 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:5000/api/reminders";
-const AUTH_URL = "http://localhost:5000/api/auth";
-
 const api = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL:
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
 });
 
 api.interceptors.request.use((config) => {
@@ -53,5 +51,24 @@ export async function updateReminder(id, reminderData) {
 
 export async function deleteReminder(id) {
   const response = await api.delete(`/reminders/${id}`);
+  return response.data;
+}
+
+export async function registerPushInstallation(fid) {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const response = await api.post("/notifications/register", {
+    fid,
+    timezone,
+  });
+
+  return response.data;
+}
+
+export async function unregisterPushInstallation(fid) {
+  const response = await api.delete("/notifications/register", {
+    data: { fid },
+    timeout: 5000,
+  });
+
   return response.data;
 }
