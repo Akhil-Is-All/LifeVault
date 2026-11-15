@@ -2,9 +2,13 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const connectDB = require("./config/db");
+const { initializeFirebaseAdmin } = require("./config/firebaseAdmin");
+const NotificationDelivery = require("./models/NotificationDelivery");
+const { startNotificationScheduler } = require("./jobs/notificationScheduler");
 const authRoutes = require("./routes/authRoutes");
 
 const reminderRoutes = require("./routes/reminderRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 dotenv.config();
 
@@ -28,13 +32,29 @@ app.get("/api/health", (req, res) => {
 });
 
 app.use("/api/reminders", reminderRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 async function startServer() {
-    await connectDB();
-  
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
+  await connectDB();
+
+  try {
+    await NotificationDelivery.createCollection();
+  } catch (error) {
+    if (error.code !== 48 && error.codeName !== "NamespaceExists") {
+      throw error;
+    }
   }
-  
-  startServer();
+
+  await NotificationDelivery.createIndexes();
+  initializeFirebaseAdmin();
+  startNotificationScheduler();
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+startServer().catch((error) => {
+  console.error("Server startup failed:", error.message);
+  process.exit(1);
+});

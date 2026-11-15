@@ -19,3 +19,5 @@ npm-debug.log*
 # Operating system
 .DS_Store
 Thumbs.db
+backend/config/firebase-service-account.json
+backend/config/lifevault-acbcf-firebase-adminsdk-fbsvc-e450a9a9f4.json
